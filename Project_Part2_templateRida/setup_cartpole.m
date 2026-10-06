@@ -11,7 +11,7 @@ g=9.81;
 %%%%% Vary the initial state %%%%%%
 param.p0     = 0;
 param.v0     = 0;
-param.theta0 = 20; % Simscape joint target is in degrees (0 upright, 180 down)
+param.theta0 = 180; % Simscape joint target is in degrees (0 upright, 180 down)
 param.omega0 = 0;
 
 x0 = [param.p0; param.v0;
@@ -69,38 +69,105 @@ K_lqr = dlqr(Ad,Bd,Q_lqr,R_lqr);
 
 
 %% iLQR setup
-%T =           % Swing-up horizon [s]
-%N = round(T/Ts);
-%T = N*Ts;
 
-% Initial guess
-%U0 = ...
+T = 8.0;
+N = round(T/Ts);
+T = N*Ts;
 
-% Swing-up weight matrices
-%Q  = ...
-%R  = ...
-%Qf = ...
+t_ilqr = (0:N-1)*Ts;
+
+% Stronger initial energy-pumping guess
+U0 = 15*sin(2*pi*0.45*t_ilqr);
+
+% Small running-state penalties
+Q = diag([0.5, 0.02, 0.2, 0.02]);
+
+R = 0.01;
+
+% Strong terminal objective
+Qf = diag([300, 50, 6000, 1500]);
 
 %% Optimize swing-up
-%%% Implement ilqr function %%%
-%[Xnom,Unom,Knom,costHistory] = ilqr(x0,U0,model,Ts,Q,R,Qf,Fmax);
+
+[Xnom,Unom,Knom,costHistory] = ilqr(x0,U0,model,Ts,Q,R,Qf,Fmax);
 
 %% Check nominal trajectory
 
-%%% Check if the nominal trajectory Xnum, Unom returned by iLQR satisfies
-%%% that the terminal state is in the capture zone, the cart displacement
-%%% is within limits, the force is bounded (it should be)
+x_final = Xnom(:,end);
 
+fprintf('\nFinal state:\n');
+fprintf('p     = %.4f m\n',x_final(1));
+fprintf('v     = %.4f m/s\n',x_final(2));
+fprintf('theta = %.4f rad (%.2f deg)\n', ...
+    x_final(3),rad2deg(x_final(3)));
+fprintf('omega = %.4f rad/s\n',x_final(4));
+
+max_force = max(abs(Unom));
+max_cart_position = max(abs(Xnom(1,:)));
+
+fprintf('\nTrajectory limits:\n');
+fprintf('Maximum force = %.4f N\n',max_force);
+fprintf('Maximum cart displacement = %.4f m\n', ...
+    max_cart_position);
+
+fprintf('Force limit satisfied: %d\n', ...
+    max_force <= Fmax);
+
+fprintf('Cart limit satisfied: %d\n', ...
+    max_cart_position <= xmax);
+
+fprintf('\nTerminal state:\n');
+fprintf('|p|     = %.4f m\n',abs(x_final(1)));
+fprintf('|v|     = %.4f m/s\n',abs(x_final(2)));
+fprintf('|theta| = %.2f deg\n',abs(rad2deg(x_final(3))));
+fprintf('|omega| = %.4f rad/s\n',abs(x_final(4)));
 
 %% Plot results
 
-%%%% You can plot the nominal state and control trajectories. These can be
-%%%% informative for changing iLQR parameters for finding a feasible
-%%%% trajectory.
+t_state = (0:N)*Ts;
+t_control = (0:N-1)*Ts;
+
+figure
+
+subplot(4,1,1)
+plot(t_state,Xnom(1,:),'LineWidth',1.4)
+ylabel('p [m]')
+grid on
+
+subplot(4,1,2)
+plot(t_state,Xnom(2,:),'LineWidth',1.4)
+ylabel('v [m/s]')
+grid on
+
+subplot(4,1,3)
+plot(t_state,rad2deg(Xnom(3,:)),'LineWidth',1.4)
+ylabel('\theta [deg]')
+grid on
+
+subplot(4,1,4)
+plot(t_state,Xnom(4,:),'LineWidth',1.4)
+ylabel('\omega [rad/s]')
+xlabel('Time [s]')
+grid on
+
+figure
+plot(t_control,Unom,'LineWidth',1.4)
+yline(Fmax,'--')
+yline(-Fmax,'--')
+xlabel('Time [s]')
+ylabel('Force [N]')
+title('Optimized Swing-up Control')
+grid on
+
+figure
+plot(0:length(costHistory)-1,costHistory,'-o','LineWidth',1.4)
+xlabel('Accepted iLQR iteration')
+ylabel('Cost')
+title('iLQR Cost Convergence')
+grid on
 
 %% Simulation 
 %out=sim("cartpole");
 
-%%% Plot additional results. For example, comparing nominal and resulting
-%%% swing-up trajectory.
+
 
