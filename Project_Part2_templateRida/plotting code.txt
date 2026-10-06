@@ -1,0 +1,8 @@
+figure
+
+plot(out.time.Time,out.x.Data)
+
+xlabel('Time [s]')
+ylabel('State')
+legend('p','v','theta','omega')
+grid on
