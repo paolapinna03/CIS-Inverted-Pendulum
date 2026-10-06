@@ -1,0 +1,42 @@
+%parameters
+p.m = 1.0; 
+p.l = 0.5; 
+p.g = 9.81; 
+p.b = 0.1; 
+p.J = p.m * p.l^2; 
+
+m.m = p.m; 
+m.l = p.l;
+m.g = p.g;
+m.b = p.b;
+m.J = m.m * m.l^2;
+
+Ts = 0.01; % Sampling time
+
+% Linearization & Discretization 
+Ac = [0, 1; (m.g / m.l), -m.b / m.J];
+Bc = [0; 1 / m.J];
+
+% Discretize using Zero-Order Hold 
+sys_c = ss(Ac, Bc, [1 0], 0);
+sys_d = c2d(sys_c, Ts, 'zoh');
+Ad = sys_d.A;
+Bd = sys_d.B;
+
+% Measurement Matrix (Measuring only angle)
+C = [1 0]; 
+
+% Discrete-Time LQR Design
+Q = diag([100, 10]); 
+R = 1;               
+K = dlqr(Ad, Bd, Q, R);
+
+% Observer Design
+% Place observer poles 3-5 times faster than LQR closed-loop poles
+lqr_poles = eig(Ad - Bd*K);
+observer_poles = lqr_poles * 0.3; 
+L = place(Ad', C', observer_poles)';
+
+% --- 5. Actuation Limits ---
+umin = -2.3;
+umax = 2.3;
