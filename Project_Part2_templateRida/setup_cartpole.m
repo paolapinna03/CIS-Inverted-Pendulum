@@ -91,6 +91,11 @@ Qf = diag([300, 50, 6000, 1500]);
 
 [Xnom,Unom,Knom,costHistory] = ilqr(x0,U0,model,Ts,Q,R,Qf,Fmax);
 
+% Simulink handles the time-varying feedback gains more robustly as a
+% 2-D matrix than as the native 1x4xN array returned by iLQR.
+% Column k contains the four feedback coefficients used at time step k.
+Knom_sim = reshape(Knom,4,N);
+
 %% Check nominal trajectory
 
 x_final = Xnom(:,end);
@@ -169,7 +174,6 @@ grid on
 %% Configure and run Simulink simulation
 % The helper configures the MATLAB Function block so that the iLQR nominal
 % trajectory is tracked for the first T seconds. Afterwards the upright LQR
-% takes over. The helper also fixes the MATLAB Function data dimensions to
-% avoid variable-size/code-generation errors.
+% takes over.
 configure_cartpole_controller;
 out = sim("cartpole");
