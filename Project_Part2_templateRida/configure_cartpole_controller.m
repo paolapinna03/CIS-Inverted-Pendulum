@@ -3,8 +3,8 @@ function configure_cartpole_controller()
 % iLQR trajectory tracking followed by upright LQR stabilization.
 %
 % The optimized quantities are passed to the MATLAB Function block through
-% Constant blocks. This avoids MATLAB Function parameter-scope issues and
-% makes all controller dependencies explicit in the Simulink diagram.
+% Constant blocks. The iLQR feedback gains are provided as a 4xN matrix
+% (Knom_sim) so Simulink does not need to index/reshape a 3-D signal.
 
 model = 'cartpole';
 blockName = 'MATLAB Function';
@@ -22,7 +22,7 @@ chart = chart(1);
 
 % Remove old parameter declarations created by previous attempts. These
 % variables will become ordinary input ports instead.
-extraNames = {'Ts','K_lqr','Fmax','Knom','Unom','Xnom'};
+extraNames = {'Ts','K_lqr','Fmax','Knom','Knom_sim','Unom','Xnom'};
 for i = 1:numel(extraNames)
     d = chart.find('-isa','Stateflow.Data','Name',extraNames{i});
     for j = 1:numel(d)
@@ -33,7 +33,7 @@ end
 % Use explicit inputs. u is initialized as a scalar so code generation
 % cannot infer a variable-size output.
 chart.Script = sprintf([ ...
-    'function u = controller(x,t,Ts,K_lqr,Fmax,Knom,Unom,Xnom)\n' ...
+    'function u = controller(x,t,Ts,K_lqr,Fmax,Knom_sim,Unom,Xnom)\n' ...
     '%% x = [p; v; theta; omega]\n' ...
     'u = 0.0;\n' ...
     'u_raw = 0.0;\n' ...
@@ -45,7 +45,7 @@ chart.Script = sprintf([ ...
     'if k <= Nctrl\n' ...
     '    x_nom = Xnom(:,k);\n' ...
     '    u_nom = Unom(1,k);\n' ...
-    '    K_nom = reshape(Knom(:,:,k),1,4);\n' ...
+    '    K_nom = Knom_sim(:,k).'';\n' ...
     '    e = x - x_nom;\n' ...
     '    e(3) = atan2(sin(e(3)),cos(e(3)));\n' ...
     '    u_raw = u_nom - K_nom*e;\n' ...
@@ -62,7 +62,7 @@ set_param(model,'SimulationCommand','update');
 
 % Add/update Constant blocks for controller data. Their values are variable
 % names populated in the base workspace by setup_cartpole.m.
-values = {'Ts','K_lqr','Fmax','Knom','Unom','Xnom'};
+values = {'Ts','K_lqr','Fmax','Knom_sim','Unom','Xnom'};
 positions = [ ...
      30 500 100 530; ...
      30 545 100 575; ...
@@ -82,6 +82,17 @@ for i = 1:numel(values)
     else
         set_param(srcPath,'Value',values{i});
     end
+end
+
+% Remove the obsolete cfg_Knom block if it exists from a previous run.
+oldPath = [model '/cfg_Knom'];
+if getSimulinkBlockHandle(oldPath) ~= -1
+    oldPH = get_param(oldPath,'PortHandles');
+    oldLine = get_param(oldPH.Outport,'Line');
+    if oldLine ~= -1
+        delete_line(oldLine);
+    end
+    delete_block(oldPath);
 end
 
 % Refresh after adding blocks, then connect ports 3..8. Ports 1 and 2 are
