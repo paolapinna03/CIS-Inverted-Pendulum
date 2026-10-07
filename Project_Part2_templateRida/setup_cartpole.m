@@ -166,8 +166,10 @@ ylabel('Cost')
 title('iLQR Cost Convergence')
 grid on
 
-%% Simulation 
-%out=sim("cartpole");
-
-
-
+%% Configure and run Simulink simulation
+% The helper configures the MATLAB Function block so that the iLQR nominal
+% trajectory is tracked for the first T seconds. Afterwards the upright LQR
+% takes over. The helper also fixes the MATLAB Function data dimensions to
+% avoid variable-size/code-generation errors.
+configure_cartpole_controller;
+out = sim("cartpole");
