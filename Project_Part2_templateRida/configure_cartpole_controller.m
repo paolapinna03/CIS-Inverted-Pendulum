@@ -70,7 +70,10 @@ chart.Script = sprintf([ ...
 % Give the upright LQR a few seconds after the 8 s swing-up trajectory.
 set_param(model,'StopTime','12');
 
-save_system(model);
+% The model may already be loaded in MATLAB while Git updates its file on
+% disk.  In that case MATLAB refuses to save unless we explicitly confirm
+% that the configured in-memory model should overwrite the stale disk copy.
+save_system(model,[],'OverwriteIfChangedOnDisk',true);
 
 fprintf('Configured %s for iLQR tracking + upright LQR.\n', blockPath);
 end
