@@ -30,7 +30,11 @@ for k = 1:N_sim
     
     % 3. Check Capture Zone
     in_capture_zone = abs(x_wrap(3)) < theta_thresh && abs(x_wrap(4)) < omega_thresh;
-    
+
+    if in_capture_zone
+        fprintf('Entered capture zone at t = %.2f s\n', (k-1)*Ts);
+    end
+
     % 4. Switching Logic & Controller
     if in_capture_zone
         % LQR Stabilization Mode

@@ -1,5 +1,4 @@
 %% Physical parameters used by Simscape
-%%%%% You can vary the parameters %%%%%%
 param.m  = 1.0;     % Pendulum mass [kg]
 param.M  = 1.0;     % Cart mass [kg]
 param.L  = 0.5;     % Full pole length [m]
@@ -8,10 +7,9 @@ param.bp = 0.05;    % Pivot damping [N*m*s/rad]
 g=9.81;
 
 %% Initial conditions: hanging down, stationary
-%%%%% Vary the initial state %%%%%%
 param.p0     = 0;
 param.v0     = 0;
-param.theta0 = 180; % Simscape joint target is in degrees (0 upright, 180 down)
+param.theta0 = 180; % (0 upright, 180 down)
 param.omega0 = 0;
 
 x0 = [param.p0; param.v0;
@@ -25,14 +23,13 @@ model.bc  = param.bc;
 model.bp  = param.bp;
 model.g   = g;
 
-%%%%% You can vary these parameters %%%%%%
+
 Ts   = 0.01;               % Sample time for discrete-time dynamics [s]
 Fmax = 20;                 % Force saturation [N]
 xmax = 0.5;                % Cart-travel limit [m] (can be arbitrarily large)
 
 %% Continuous-time linearization at upright
 % Upright = 0; positive angles are counterclockwise from 0
-%%% You do not need to change this part %%%
 
 M   = model.M;
 m   = model.m;
@@ -61,7 +58,7 @@ sys_d = c2d(sys_c,Ts,'zoh');
 Ad = sys_d.A;
 Bd = sys_d.B;
 
-%%% Compute the discrete LQR gain, select and justify weight matrices
+%%% Compute the discrete LQR gain
 Q_lqr = diag([10 1 100 10]);
 R_lqr = 1;
 
@@ -167,7 +164,7 @@ title('iLQR Cost Convergence')
 grid on
 
 %% Simulation 
-%out=sim("cartpole");
+out=sim("cartpole");
 
 
 
